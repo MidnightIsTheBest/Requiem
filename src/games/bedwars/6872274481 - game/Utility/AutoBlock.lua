@@ -13,6 +13,7 @@ run(function()
 	local LimitItem
 	local Mouse
 	local SkipSelf
+	local Fill
 
 	local adjacent = {}
 	for x = -3, 3, 3 do
@@ -74,6 +75,12 @@ run(function()
 		end
 		if Top.Enabled then
 			table.insert(cells, feet + Vector3.new(0, Head.Enabled and 6 or 3, 0))
+		end
+		-- fill in: once the walls are up, also fill the two blocks the player is standing in
+		-- (last in the list, so the cage always gets built first)
+		if Fill.Enabled then
+			table.insert(cells, feet)
+			table.insert(cells, feet + Vector3.new(0, 3, 0))
 		end
 		return cells
 	end
@@ -149,8 +156,8 @@ run(function()
 	PerTick = AutoBlock:CreateSlider({
 		Name = 'Blocks per tick',
 		Min = 1,
-		Max = 6,
-		Default = 3
+		Max = 20,
+		Default = 6
 	})
 	Head = AutoBlock:CreateToggle({
 		Name = 'Head level',
@@ -165,6 +172,10 @@ run(function()
 	Under = AutoBlock:CreateToggle({
 		Name = 'Under',
 		Tooltip = 'Fill the block under their feet'
+	})
+	Fill = AutoBlock:CreateToggle({
+		Name = 'Fill in',
+		Tooltip = 'After the cage is built, fills the blocks the player is standing in so they suffocate'
 	})
 	SkipSelf = AutoBlock:CreateToggle({
 		Name = 'Skip own cell',
