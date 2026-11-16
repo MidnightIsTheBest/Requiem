@@ -34,6 +34,23 @@ run(function()
 		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
 	end)
 
+	-- REQUIEM: find the Knit upvalue by looking at what is actually there instead of
+	-- trusting a hardcoded index (the game update moved them and the old hook broke swings)
+	local swordHookIndex, scytheHookIndex
+	local function findKnitUpvalue(func)
+		if type(func) ~= 'function' then return end
+		for i = 1, 40 do
+			local ok, v = pcall(debug.getupvalue, func, i)
+			if not ok then break end
+			if type(v) == 'table' then
+				local good = pcall(function()
+					assert(type(v.Controllers) == 'table' and v.Controllers.ViewmodelController ~= nil)
+				end)
+				if good then return i end
+			end
+		end
+	end
+
 	-- REQUIEM: block pose + block spin animations
 	-- Tweak these two CFrames if the pose looks off on your viewmodel.
 	-- BlockPose  = sword held across the body (like blocking in Minecraft)
@@ -102,8 +119,14 @@ run(function()
 							}
 						}
 					}
-					debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, fake)
-					debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake)
+					swordHookIndex = findKnitUpvalue(oldSwing or bedwars.SwordController.playSwordEffect)
+					scytheHookIndex = findKnitUpvalue(bedwars.ScytheController.playLocalAnimation)
+					if swordHookIndex then
+						debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, swordHookIndex, fake)
+					end
+					if scytheHookIndex then
+						debug.setupvalue(bedwars.ScytheController.playLocalAnimation, scytheHookIndex, fake)
+					end
 
 					task.spawn(function()
 						local started = false
@@ -251,8 +274,14 @@ run(function()
 						lplr.PlayerGui.MobileUI['2'].Visible = true
 					end)
 				end
-				debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, 6, bedwars.Knit)
-				debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit)
+				if swordHookIndex then
+					debug.setupvalue(oldSwing or bedwars.SwordController.playSwordEffect, swordHookIndex, bedwars.Knit)
+					swordHookIndex = nil
+				end
+				if scytheHookIndex then
+					debug.setupvalue(bedwars.ScytheController.playLocalAnimation, scytheHookIndex, bedwars.Knit)
+					scytheHookIndex = nil
+				end
 				Attacking = false
 				if armC0 then
 					AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
