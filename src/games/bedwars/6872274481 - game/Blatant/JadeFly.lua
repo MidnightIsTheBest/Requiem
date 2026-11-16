@@ -9,14 +9,21 @@ run(function()
 	local Duration
 	local WallCheck
 	local StopOnLand
+	local TP
 
 	local ABILITY = 'jade_hammer_jump'
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
 
 	local active, startTime, endTime, connection = false, 0, 0, nil
+	local tpTick, tpToggle, oldy = tick(), true, nil -- TP Down state (same idea as the Fly module)
 
 	local function stop()
+		if oldy and entitylib.isAlive then
+			local root = entitylib.character.RootPart
+			root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, oldy, root.Position.Z), root.CFrame.LookVector)
+		end
+		oldy, tpToggle = nil, true
 		if connection then
 			connection:Disconnect()
 			connection = nil
@@ -37,6 +44,7 @@ run(function()
 		if active then return end -- already flying: just extend
 
 		active = true
+		oldy, tpToggle, tpTick = nil, true, tick()
 		store.JadeFlyActive = true -- makes the Speed module stand down while this runs
 		frictionTable.JadeFly = true
 		updateVelocity()
@@ -45,7 +53,7 @@ run(function()
 			if (not JadeFly.Enabled) or (not entitylib.isAlive) or tick() > endTime then
 				return stop()
 			end
-			if StopOnLand.Enabled and (tick() - startTime) > 0.6 and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
+			if StopOnLand.Enabled and (not oldy) and (tick() - startTime) > 0.6 and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
 				return stop()
 			end
 			if not isnetworkowner(entitylib.character.RootPart) then return end
@@ -74,8 +82,34 @@ run(function()
 				vertical = (inputService:IsKeyDown(Enum.KeyCode.Space) and 1 or 0) - (inputService:IsKeyDown(Enum.KeyCode.LeftShift) and 1 or 0)
 			end
 
+			local mass = 1.5 + (vertical * VerticalValue.Value)
+
+			-- TP Down (same logic as the Fly module): after 2s in the air, drop to the ground
+			-- for a moment, then put you back at your old height
+			rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
+			rayCheck.CollisionGroup = root.CollisionGroup
+			if tpToggle then
+				if (tick() - entitylib.character.AirTime) > 2 and not oldy then
+					local ray = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), rayCheck)
+					if ray and TP.Enabled then
+						tpToggle = false
+						oldy = root.Position.Y
+						tpTick = tick() + 0.11
+						root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, ray.Position.Y + entitylib.character.HipHeight, root.Position.Z), root.CFrame.LookVector)
+					end
+				end
+			elseif oldy then
+				if tpTick < tick() then
+					root.CFrame = CFrame.lookAlong(Vector3.new(root.Position.X, oldy, root.Position.Z), root.CFrame.LookVector)
+					tpToggle = true
+					oldy = nil
+				else
+					mass = 0
+				end
+			end
+
 			root.CFrame += destination
-			root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, 1.5 + (vertical * VerticalValue.Value), 0)
+			root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, mass, 0)
 		end)
 	end
 
@@ -125,7 +159,7 @@ run(function()
 	Value = JadeFly:CreateSlider({
 		Name = 'Speed',
 		Min = 1,
-		Max = 40,
+		Max = 65,
 		Default = 28,
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'
@@ -151,6 +185,11 @@ run(function()
 	WallCheck = JadeFly:CreateToggle({
 		Name = 'Wall Check',
 		Default = true
+	})
+	TP = JadeFly:CreateToggle({
+		Name = 'TP Down',
+		Default = true,
+		Tooltip = 'Like the Fly module: after 2s in the air, drops you to the ground and back up'
 	})
 	StopOnLand = JadeFly:CreateToggle({
 		Name = 'Stop on land',
