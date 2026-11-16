@@ -14,6 +14,8 @@ run(function()
 	local Mouse
 	local SkipSelf
 	local Fill
+	local Instant
+	local recent = {}
 
 	local adjacent = {}
 	for x = -3, 3, 3 do
@@ -113,17 +115,28 @@ run(function()
 								Sort = sortmethods.Distance
 							})
 
+							local now = tick()
+							for key, expiry in recent do
+								if expiry < now then recent[key] = nil end
+							end
+
 							for _, plr in plrs do
-								if placed >= PerTick.Value then break end
+								if (not Instant.Enabled) and placed >= PerTick.Value then break end
 								for _, cell in getCells(plr.RootPart, plr.HipHeight or 2) do
-									if placed >= PerTick.Value then break end
+									if (not Instant.Enabled) and placed >= PerTick.Value then break end
 
 									-- don't wall yourself in when the target is right next to you
 									if SkipSelf.Enabled and ((cell - selffeet).Magnitude < 1 or (cell - (selffeet + Vector3.new(0, 3, 0))).Magnitude < 1) then
 										continue
 									end
 
-									if not getPlacedBlock(cell) and checkAdjacent(cell) then
+									if getPlacedBlock(cell) or recent[cell] then continue end
+
+									-- Instant: every cell of the cage is sent in this same frame, bottom to top, without
+									-- waiting for the previous block to register (the server handles them in order).
+									-- Otherwise: only cells that already touch an existing block, a few per tick.
+									if Instant.Enabled or checkAdjacent(cell) then
+										recent[cell] = now + 0.3
 										task.spawn(bedwars.placeBlock, cell, wool, false)
 										placed += 1
 									end
@@ -155,6 +168,7 @@ run(function()
 	})
 	PerTick = AutoBlock:CreateSlider({
 		Name = 'Blocks per tick',
+		Tooltip = 'Only used when Instant is off',
 		Min = 1,
 		Max = 20,
 		Default = 6
@@ -172,6 +186,11 @@ run(function()
 	Under = AutoBlock:CreateToggle({
 		Name = 'Under',
 		Tooltip = 'Fill the block under their feet'
+	})
+	Instant = AutoBlock:CreateToggle({
+		Name = 'Instant',
+		Default = true,
+		Tooltip = 'Places the whole cage in one frame so targets cannot walk out. Off = a few blocks per tick (see Blocks per tick)'
 	})
 	Fill = AutoBlock:CreateToggle({
 		Name = 'Fill in',
