@@ -1,0 +1,45 @@
+# Bundles ./src with the vendored ./bundler and pushes the result to the `compiled`
+# branch of this repo. The loadstring downloads everything from that branch.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '24.15.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone source files
+      uses: actions/checkout@v6
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install node packages
+      run: |-
+        cd ./bundler
+        npm i
+
+    - name: Run Bundler
+      run: |-
+        mkdir -p ./VapeCompiled
+        node ./bundler/index.js prod
+
+    - name: Push compiled branch
+      run: |-
+        cd ./VapeCompiled
+        git init -q -b compiled
+        git config user.name "github-actions[bot]"
+        git config user.email "username@users.noreply.github.com"
+        git add .
+        git commit -qm "Compiled ${GITHUB_SHA}"
+        git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" compiled
