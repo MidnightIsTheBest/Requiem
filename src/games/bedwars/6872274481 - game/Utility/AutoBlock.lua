@@ -15,6 +15,8 @@ run(function()
 	local SkipSelf
 	local Fill
 	local Instant
+	local TimeControl
+	local Delay
 	local recent = {}
 
 	local adjacent = {}
@@ -145,7 +147,7 @@ run(function()
 						end
 					end
 
-					task.wait(0.03)
+					task.wait((not Instant.Enabled) and TimeControl.Enabled and (Delay.Value / 1000) or 0.03)
 				until not AutoBlock.Enabled
 			end
 		end,
@@ -168,10 +170,29 @@ run(function()
 	})
 	PerTick = AutoBlock:CreateSlider({
 		Name = 'Blocks per tick',
-		Tooltip = 'Only used when Instant is off',
+		Tooltip = 'How many blocks are placed each tick (only when Instant is off)',
 		Min = 1,
 		Max = 20,
-		Default = 6
+		Default = 6,
+		Visible = false
+	})
+	TimeControl = AutoBlock:CreateToggle({
+		Name = 'In-depth time control',
+		Tooltip = 'Lets you set exactly how fast it box-ins when Instant is off',
+		Visible = false,
+		Function = function(callback)
+			Delay.Object.Visible = callback and not Instant.Enabled
+		end
+	})
+	Delay = AutoBlock:CreateSlider({
+		Name = 'Delay between ticks',
+		Tooltip = 'Time between each batch of blocks. Lower = faster',
+		Min = 0,
+		Max = 500,
+		Default = 30,
+		Visible = false,
+		Darker = true,
+		Suffix = 'ms'
 	})
 	Head = AutoBlock:CreateToggle({
 		Name = 'Head level',
@@ -190,7 +211,12 @@ run(function()
 	Instant = AutoBlock:CreateToggle({
 		Name = 'Instant',
 		Default = true,
-		Tooltip = 'Places the whole cage in one frame so targets cannot walk out. Off = a few blocks per tick (see Blocks per tick)'
+		Tooltip = 'Places the whole cage in one frame so targets cannot walk out. Off = you choose the speed (Blocks per tick, In-depth time control)',
+		Function = function(callback)
+			PerTick.Object.Visible = not callback
+			TimeControl.Object.Visible = not callback
+			Delay.Object.Visible = (not callback) and TimeControl.Enabled
+		end
 	})
 	Fill = AutoBlock:CreateToggle({
 		Name = 'Fill in',
