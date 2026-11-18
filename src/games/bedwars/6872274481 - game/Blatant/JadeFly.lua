@@ -159,7 +159,7 @@ run(function()
 	Value = JadeFly:CreateSlider({
 		Name = 'Speed',
 		Min = 1,
-		Max = 65,
+		Max = 150,
 		Default = 28,
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'

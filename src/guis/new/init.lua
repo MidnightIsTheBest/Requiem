@@ -72,6 +72,81 @@ scale.Parent = scaledgui
 scaledgui.Size = UDim2.fromScale(1 / scale.Scale, 1 / scale.Scale)
 components.GUI({})
 
+--[[
+	Snow Particles – drifting snowflakes across the click-gui
+]]
+do
+	local snowContainer = Instance.new('Frame')
+	snowContainer.BackgroundTransparency = 1
+	snowContainer.ClipsDescendants = true
+	snowContainer.Name = 'Snow'
+	snowContainer.Size = UDim2.fromScale(1, 1)
+	snowContainer.ZIndex = 10
+	snowContainer.Parent = clickgui
+
+	local snowflakes = {}
+	local MAX_FLAKES = 45
+	local rng = Random.new()
+
+	local function spawnFlake()
+		local size = rng:NextInteger(2, 5)
+		local flake = Instance.new('Frame')
+		flake.BackgroundColor3 = Color3.new(1, 1, 1)
+		flake.BackgroundTransparency = rng:NextNumber(0.3, 0.7)
+		flake.BorderSizePixel = 0
+		flake.Size = UDim2.fromOffset(size, size)
+		flake.ZIndex = 10
+		local corner = Instance.new('UICorner')
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = flake
+		flake.Parent = snowContainer
+
+		local data = {
+			obj = flake,
+			x = rng:NextNumber(0, 1),
+			y = rng:NextNumber(-0.1, -0.02),
+			speed = rng:NextNumber(12, 35),
+			drift = rng:NextNumber(-8, 8),
+			wobbleSpeed = rng:NextNumber(0.5, 2),
+			wobbleAmp = rng:NextNumber(3, 10),
+			time = rng:NextNumber(0, 6.28)
+		}
+		table.insert(snowflakes, data)
+		return data
+	end
+
+	for _ = 1, MAX_FLAKES do
+		local d = spawnFlake()
+		d.y = rng:NextNumber(0, 1)
+	end
+
+	vape:Clean(runService.RenderStepped:Connect(function(dt)
+		if not clickgui.Visible then return end
+		local absX = snowContainer.AbsoluteSize.X
+		local absY = snowContainer.AbsoluteSize.Y
+		if absX < 1 or absY < 1 then return end
+
+		for i = #snowflakes, 1, -1 do
+			local s = snowflakes[i]
+			s.time = s.time + dt
+			s.y = s.y + (s.speed / absY) * dt
+			local wobble = math.sin(s.time * s.wobbleSpeed) * (s.wobbleAmp / absX)
+			local px = s.x + wobble
+			if s.y > 1.05 then
+				s.y = rng:NextNumber(-0.08, -0.02)
+				s.x = rng:NextNumber(0, 1)
+				s.time = 0
+			end
+			s.obj.Position = UDim2.fromScale(math.clamp(px, 0, 1), s.y)
+		end
+	end))
+
+	vape:Clean(function()
+		for _, s in snowflakes do s.obj:Destroy() end
+		table.clear(snowflakes)
+	end)
+end
+
 vape:CreateCategory({
 	Name = 'Combat',
 	Icon = getvapeasset('requiem/assets/new/combat.png'),
