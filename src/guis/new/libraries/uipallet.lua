@@ -1,5 +1,5 @@
 uipallet = {
-	Main = Color3.fromRGB(26, 25, 26),
+	Main = Color3.fromRGB(0, 0, 0),
 	Text = Color3.fromRGB(200, 200, 200),
 	Font = Font.fromEnum(Enum.Font.Arial),
 	FontSemiBold = Font.fromEnum(Enum.Font.Arial, Enum.FontWeight.SemiBold),
