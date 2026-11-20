@@ -65,7 +65,7 @@ run(function()
 		anchor.Transparency = 1
 		anchor.Size = Vector3.new(0.1, 0.1, 0.1)
 		anchor.Position = position
-		anchor.Parent = vape.holder
+		anchor.Parent = gameCamera
 		bb.Adornee = anchor
 
 		local uiScale = Instance.new('UIScale')

@@ -53,7 +53,7 @@ run(function()
 			p.TopSurface = Enum.SurfaceType.Smooth
 			p.BottomSurface = Enum.SurfaceType.Smooth
 			p.Transparency = Transparency and Transparency.Value or 0.3
-			p.Parent = vape.holder
+			p.Parent = gameCamera
 			parts[i] = p
 		end
 	end
@@ -81,13 +81,13 @@ run(function()
 				RangeVis:Clean(runService.RenderStepped:Connect(function()
 					local alive = entitylib.isAlive and entitylib.character.RootPart
 					for _, p in parts do
-						p.Parent = alive and vape.holder or nil
+						p.Parent = alive and gameCamera or nil
 					end
 					if not alive then return end
 
 					local root = entitylib.character.RootPart
 					local r = getRadius()
-					local y = root.Position.Y - (entitylib.character.HipHeight or 2) - (root.Size.Y / 2) + 0.05
+					local y = root.Position.Y - (entitylib.character.HipHeight or 3) + 0.08
 					local center = Vector3.new(root.Position.X, y, root.Position.Z)
 
 					local col
