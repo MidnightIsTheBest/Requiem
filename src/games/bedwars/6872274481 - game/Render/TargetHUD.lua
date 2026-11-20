@@ -7,11 +7,13 @@ run(function()
 	local HUDTransparency
 	local HUDScale
 	local activeHUD
+	local hud = {}
 
 	local function clearHUD()
 		if activeHUD then
 			activeHUD:Destroy()
 			activeHUD = nil
+			table.clear(hud)
 		end
 	end
 
@@ -106,16 +108,16 @@ run(function()
 		distLabel.Visible = ShowDistance.Enabled
 		distLabel.Parent = bg
 
-		bb._nameLabel = nameLabel
-		bb._healthBar = healthBar
-		bb._healthBG = healthBG
-		bb._healthText = healthText
-		bb._distLabel = distLabel
+		hud.nameLabel = nameLabel
+		hud.healthBar = healthBar
+		hud.healthBG = healthBG
+		hud.healthText = healthText
+		hud.distLabel = distLabel
 
 		local uiScale = Instance.new('UIScale')
 		uiScale.Scale = HUDScale.Value
 		uiScale.Parent = bb
-		bb._uiScale = uiScale
+		hud.uiScale = uiScale
 	end
 
 	TargetHUD = vape.Categories.Render:CreateModule({
@@ -158,13 +160,13 @@ run(function()
 					local hp = target.Health or 0
 					local maxHp = target.MaxHealth or 100
 					local pct = math.clamp(hp / maxHp, 0, 1)
-					activeHUD._healthBar.Size = UDim2.fromScale(pct, 1)
-					activeHUD._healthBar.BackgroundColor3 = Color3.fromHSV(pct / 2.8, 0.9, 0.85)
-					activeHUD._healthText.Text = math.floor(hp)..' / '..math.floor(maxHp)
+					hud.healthBar.Size = UDim2.fromScale(pct, 1)
+					hud.healthBar.BackgroundColor3 = Color3.fromHSV(pct / 2.8, 0.9, 0.85)
+					hud.healthText.Text = math.floor(hp)..' / '..math.floor(maxHp)
 
 					if entitylib.isAlive and target.RootPart then
 						local dist = (entitylib.character.RootPart.Position - target.RootPart.Position).Magnitude
-						activeHUD._distLabel.Text = string.format('%.1f studs', dist)
+						hud.distLabel.Text = string.format('%.1f studs', dist)
 					end
 				end))
 
@@ -181,7 +183,7 @@ run(function()
 	HUDScale = TargetHUD:CreateSlider({
 		Name = 'Scale', Min = 0.5, Max = 2, Default = 1, Decimal = 10,
 		Function = function(v)
-			if activeHUD and activeHUD._uiScale then activeHUD._uiScale.Scale = v end
+			if activeHUD and hud.uiScale then hud.uiScale.Scale = v end
 		end
 	})
 	HUDTransparency = TargetHUD:CreateSlider({

@@ -18,7 +18,7 @@ run(function()
 	local VignetteEnabled
 	local VignetteTransparency
 
-	local cc, bloom, sunrays, dof, vignette
+	local cc, bloom, sunrays, dof, vignette, vignetteGradient
 
 	RichShader = vape.Categories.Render:CreateModule({
 		Name = 'Rich Shader',
@@ -66,7 +66,7 @@ run(function()
 				vignette.Size = UDim2.fromScale(1, 1)
 				vignette.BorderSizePixel = 0
 				vignette.ZIndex = 0
-				vignette.Parent = gui
+				vignette.Parent = vape.gui
 				local gradient = Instance.new('UIGradient')
 				gradient.GradientType = Enum.UIGradientType.Radial
 				gradient.Color = ColorSequence.new({
@@ -80,7 +80,7 @@ run(function()
 					NumberSequenceKeypoint.new(1, (VignetteEnabled and VignetteEnabled.Enabled) and (VignetteTransparency and VignetteTransparency.Value or 0.5) or 1)
 				})
 				gradient.Parent = vignette
-				vignette._gradient = gradient
+				vignetteGradient = gradient
 				RichShader:Clean(vignette)
 			else
 				cc = nil
@@ -88,6 +88,7 @@ run(function()
 				sunrays = nil
 				dof = nil
 				vignette = nil
+				vignetteGradient = nil
 			end
 		end
 	})
@@ -179,8 +180,8 @@ run(function()
 		Name = 'Vignette',
 		Function = function(cb)
 			if VignetteTransparency then VignetteTransparency.Object.Visible = cb end
-			if vignette and vignette._gradient then
-				vignette._gradient.Transparency = NumberSequence.new({
+			if vignetteGradient then
+				vignetteGradient.Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 1),
 					NumberSequenceKeypoint.new(0.5, 1),
 					NumberSequenceKeypoint.new(1, cb and VignetteTransparency.Value or 1)
@@ -191,8 +192,8 @@ run(function()
 	VignetteTransparency = RichShader:CreateSlider({
 		Name = 'Vignette darkness', Min = 0, Max = 1, Default = 0.5, Decimal = 20, Darker = true, Visible = false,
 		Function = function(v)
-			if vignette and vignette._gradient and VignetteEnabled.Enabled then
-				vignette._gradient.Transparency = NumberSequence.new({
+			if vignetteGradient and VignetteEnabled.Enabled then
+				vignetteGradient.Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 1),
 					NumberSequenceKeypoint.new(0.5, 1),
 					NumberSequenceKeypoint.new(1, v)
