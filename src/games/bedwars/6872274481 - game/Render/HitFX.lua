@@ -195,8 +195,8 @@ run(function()
 		Name = 'Auto Toxic',
 		Tooltip = 'Sends a message in chat when you get a kill',
 		Function = function(cb)
-			ToxicOnKill.Object.Visible = cb
-			ToxicMessages.Object.Visible = cb
+			if ToxicOnKill then ToxicOnKill.Object.Visible = cb end
+			if ToxicMessages then ToxicMessages.Object.Visible = cb end
 		end
 	})
 	ToxicOnKill = HitFX:CreateToggle({

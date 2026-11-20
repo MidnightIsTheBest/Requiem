@@ -107,7 +107,7 @@ run(function()
 	Rainbow = RangeVis:CreateToggle({
 		Name = 'Rainbow',
 		Function = function(cb)
-			RainbowSpeed.Object.Visible = cb
+			if RainbowSpeed then RainbowSpeed.Object.Visible = cb end
 			if not cb and ring then
 				ring.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
 			end

@@ -28,33 +28,33 @@ run(function()
 				if vape.ThreadFix then setthreadidentity(8) end
 
 				cc = Instance.new('ColorCorrectionEffect')
-				cc.Brightness = Brightness.Value
-				cc.Contrast = Contrast.Value
-				cc.Saturation = Saturation.Value
-				cc.TintColor = Color3.fromHSV(TintColor.Hue, TintColor.Sat, TintColor.Value)
+				cc.Brightness = Brightness and Brightness.Value or 0.05
+				cc.Contrast = Contrast and Contrast.Value or 0.15
+				cc.Saturation = Saturation and Saturation.Value or 0.2
+				cc.TintColor = TintColor and Color3.fromHSV(TintColor.Hue, TintColor.Sat, TintColor.Value) or Color3.new(1, 1, 1)
 				cc.Parent = lightingService
 				RichShader:Clean(cc)
 
 				bloom = Instance.new('BloomEffect')
-				bloom.Enabled = BloomEnabled.Enabled
-				bloom.Intensity = BloomIntensity.Value
-				bloom.Size = BloomSize.Value
-				bloom.Threshold = BloomThreshold.Value
+				bloom.Enabled = not BloomEnabled or BloomEnabled.Enabled
+				bloom.Intensity = BloomIntensity and BloomIntensity.Value or 0.6
+				bloom.Size = BloomSize and BloomSize.Value or 24
+				bloom.Threshold = BloomThreshold and BloomThreshold.Value or 1.2
 				bloom.Parent = lightingService
 				RichShader:Clean(bloom)
 
 				sunrays = Instance.new('SunRaysEffect')
-				sunrays.Enabled = SunRaysEnabled.Enabled
-				sunrays.Intensity = SunRaysIntensity.Value
-				sunrays.Spread = SunRaysSpread.Value
+				sunrays.Enabled = SunRaysEnabled and SunRaysEnabled.Enabled or false
+				sunrays.Intensity = SunRaysIntensity and SunRaysIntensity.Value or 0.15
+				sunrays.Spread = SunRaysSpread and SunRaysSpread.Value or 0.5
 				sunrays.Parent = lightingService
 				RichShader:Clean(sunrays)
 
 				dof = Instance.new('DepthOfFieldEffect')
-				dof.Enabled = DOFEnabled.Enabled
-				dof.FarIntensity = DOFFarIntensity.Value
-				dof.NearIntensity = DOFNearIntensity.Value
-				dof.FocusDistance = DOFDistance.Value
+				dof.Enabled = DOFEnabled and DOFEnabled.Enabled or false
+				dof.FarIntensity = DOFFarIntensity and DOFFarIntensity.Value or 0.3
+				dof.NearIntensity = DOFNearIntensity and DOFNearIntensity.Value or 0
+				dof.FocusDistance = DOFDistance and DOFDistance.Value or 50
 				dof.InFocusRadius = 30
 				dof.Parent = lightingService
 				RichShader:Clean(dof)
@@ -77,7 +77,7 @@ run(function()
 				gradient.Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 1),
 					NumberSequenceKeypoint.new(0.5, 1),
-					NumberSequenceKeypoint.new(1, VignetteEnabled.Enabled and VignetteTransparency.Value or 1)
+					NumberSequenceKeypoint.new(1, (VignetteEnabled and VignetteEnabled.Enabled) and (VignetteTransparency and VignetteTransparency.Value or 0.5) or 1)
 				})
 				gradient.Parent = vignette
 				vignette._gradient = gradient
@@ -115,9 +115,9 @@ run(function()
 		Name = 'Bloom', Default = true,
 		Function = function(cb)
 			if bloom then bloom.Enabled = cb end
-			BloomIntensity.Object.Visible = cb
-			BloomSize.Object.Visible = cb
-			BloomThreshold.Object.Visible = cb
+			if BloomIntensity then BloomIntensity.Object.Visible = cb end
+			if BloomSize then BloomSize.Object.Visible = cb end
+			if BloomThreshold then BloomThreshold.Object.Visible = cb end
 		end
 	})
 	BloomIntensity = RichShader:CreateSlider({
@@ -138,8 +138,8 @@ run(function()
 		Name = 'Sun Rays',
 		Function = function(cb)
 			if sunrays then sunrays.Enabled = cb end
-			SunRaysIntensity.Object.Visible = cb
-			SunRaysSpread.Object.Visible = cb
+			if SunRaysIntensity then SunRaysIntensity.Object.Visible = cb end
+			if SunRaysSpread then SunRaysSpread.Object.Visible = cb end
 		end
 	})
 	SunRaysIntensity = RichShader:CreateSlider({
@@ -156,9 +156,9 @@ run(function()
 		Name = 'Depth of Field',
 		Function = function(cb)
 			if dof then dof.Enabled = cb end
-			DOFFarIntensity.Object.Visible = cb
-			DOFNearIntensity.Object.Visible = cb
-			DOFDistance.Object.Visible = cb
+			if DOFFarIntensity then DOFFarIntensity.Object.Visible = cb end
+			if DOFNearIntensity then DOFNearIntensity.Object.Visible = cb end
+			if DOFDistance then DOFDistance.Object.Visible = cb end
 		end
 	})
 	DOFFarIntensity = RichShader:CreateSlider({
@@ -178,7 +178,7 @@ run(function()
 	VignetteEnabled = RichShader:CreateToggle({
 		Name = 'Vignette',
 		Function = function(cb)
-			VignetteTransparency.Object.Visible = cb
+			if VignetteTransparency then VignetteTransparency.Object.Visible = cb end
 			if vignette and vignette._gradient then
 				vignette._gradient.Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 1),

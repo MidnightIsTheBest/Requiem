@@ -123,7 +123,7 @@ run(function()
 	Rainbow = ChinaHat:CreateToggle({
 		Name = 'Rainbow',
 		Function = function(callback)
-			RainbowSpeed.Object.Visible = callback
+			if RainbowSpeed then RainbowSpeed.Object.Visible = callback end
 			if not callback then
 				for _, hat in Hats do for _, a in hat do a.Color3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value) end end
 			end
