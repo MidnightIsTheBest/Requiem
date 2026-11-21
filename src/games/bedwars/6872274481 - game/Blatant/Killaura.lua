@@ -80,9 +80,18 @@ run(function()
 		end
 
 		local sword = Limit.Enabled and store.hand or store.tools.sword
-		if not sword or not sword.tool then return false end
+		-- REQUIEM: refresh a stale sword reference (old tool destroyed after death / inventory reset)
+		if not Limit.Enabled and (not sword or not sword.tool or not sword.tool.Parent) then
+			local ok, fresh = pcall(getSword)
+			if ok and fresh then
+				store.tools.sword = fresh
+				sword = fresh
+			end
+		end
+		if not sword or not sword.tool or not sword.tool.Parent then return false end
 
 		local meta = bedwars.ItemMeta[sword.tool.Name]
+		if not meta or not meta.sword then return false end
 		if Limit.Enabled then
 			if store.hand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
 		end
@@ -131,9 +140,16 @@ run(function()
 					task.spawn(function()
 						local started = false
 						repeat
+							local wrist = gameCamera:FindFirstChild('Viewmodel') and gameCamera.Viewmodel:FindFirstChild('RightHand') and gameCamera.Viewmodel.RightHand:FindFirstChild('RightWrist')
+							if not wrist then
+								-- REQUIEM: viewmodel missing (respawn / no tool) - wait instead of erroring out of the loop
+								armC0, started = nil, false
+								task.wait(0.2)
+								continue
+							end
 							if Attacking then
 								if not armC0 then
-									armC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
+									armC0 = wrist.C0
 								end
 								local first = not started
 								started = true
@@ -143,17 +159,19 @@ run(function()
 								end
 
 								for _, v in anims[AnimationMode.Value] do
-									AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(first and (AnimationTween.Enabled and 0.001 or 0.1) or v.Time / AnimationSpeed.Value, Enum.EasingStyle.Linear), {
+									local dur = first and (AnimationTween.Enabled and 0.001 or 0.1) or v.Time / AnimationSpeed.Value
+									AnimTween = tweenService:Create(wrist, TweenInfo.new(dur, Enum.EasingStyle.Linear), {
 										C0 = armC0 * v.CFrame
 									})
 									AnimTween:Play()
-									AnimTween.Completed:Wait()
+									-- REQUIEM: Completed:Wait() can hang forever if the viewmodel is replaced mid-tween
+									task.wait(dur)
 									first = false
 									if (not Killaura.Enabled) or (not Attacking) then break end
 								end
 							elseif started then
 								started = false
-								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+								AnimTween = tweenService:Create(wrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
 									C0 = armC0
 								})
 								AnimTween:Play()
@@ -166,11 +184,14 @@ run(function()
 					end)
 				end
 
+				local lastForceEquip, lastErrorLog = 0, 0
 				repeat
-					local attacked, sword, meta = {}, getAttackData()
+					local attacked = {}
+					local loopOk, loopErr = pcall(function()
+					local sword, meta = getAttackData()
 					Attacking = false
 					store.KillauraTarget = nil
-					if sword then
+					if sword and entitylib.isAlive and entitylib.character.RootPart then
 						local plrs = entitylib.AllPosition({
 							Range = SwingRange.Value,
 							Wallcheck = Targets.Walls.Enabled or nil,
@@ -183,10 +204,23 @@ run(function()
 
 						if #plrs > 0 then
 							switchItem(sword.tool, 0)
+							-- REQUIEM: switchItem marks the sword as held locally even if the server
+							-- never equips it, so every hit gets rejected until you click your sword.
+							-- If the server-side hand still isn't our sword, resend the equip.
+							if (not store.hand or store.hand.tool ~= sword.tool) and tick() > lastForceEquip then
+								lastForceEquip = tick() + 0.75
+								local tool = sword.tool
+								task.spawn(function()
+									pcall(function()
+										bedwars.Client:Get(remotes.EquipItem):CallServerAsync({hand = tool})
+									end)
+								end)
+							end
 							local selfpos = entitylib.character.RootPart.Position
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
+								if not v.RootPart or not v.RootPart.Parent or not v.Character then continue end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
@@ -242,7 +276,8 @@ run(function()
 					end
 
 					for i, v in Boxes do
-						v.Adornee = attacked[i] and attacked[i].Entity.RootPart or nil
+						local root = attacked[i] and attacked[i].Entity.RootPart
+						v.Adornee = (root and root.Parent) and root or nil
 						if v.Adornee then
 							v.Color3 = Color3.fromHSV(attacked[i].Check.Hue, attacked[i].Check.Sat, attacked[i].Check.Value)
 							v.Transparency = 1 - attacked[i].Check.Opacity
@@ -250,13 +285,26 @@ run(function()
 					end
 
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
-						v.Parent = attacked[i] and gameCamera or nil
+						local root = attacked[i] and attacked[i].Entity.RootPart
+						v.Position = root and root.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Parent = root and gameCamera or nil
 					end
 
-					if Face.Enabled and attacked[1] then
-						local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
+					local faceRoot = attacked[1] and attacked[1].Entity.RootPart
+					if Face.Enabled and faceRoot and entitylib.isAlive then
+						local vec = faceRoot.Position * Vector3.new(1, 0, 1)
 						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
+					end
+					end)
+
+					if not loopOk then
+						-- REQUIEM: one bad frame (target died mid-swing etc.) used to kill this loop for good
+						Attacking = false
+						store.KillauraTarget = nil
+						if tick() > lastErrorLog then
+							lastErrorLog = tick() + 5
+							warn('[Requiem] Killaura recovered from: '..tostring(loopErr))
+						end
 					end
 
 					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
